@@ -35,7 +35,7 @@ function App() {
 
   return (
     <div style={{ fontFamily: 'sans-serif', padding: '2rem' }}>
-      <h1>FOASTUDIO</h1>
+      <h1>PRES</h1>
       <p>Sesión iniciada como {user.email}</p>
       <p>{status}</p>
       <button onClick={() => signOut(auth)}>Cerrar sesión</button>
