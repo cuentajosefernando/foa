@@ -4,10 +4,12 @@ import { auth } from './firebase'
 import { colors, radius, font } from './theme'
 import Login from './Login'
 import Facturas from './Facturas'
+import Pedimentos from './Pedimentos'
 import logo from './assets/logo-pres.jpg'
 
 const REPORTES = [
   { id: 'facturas', titulo: 'Relación facturas', componente: Facturas },
+  { id: 'pedimentos', titulo: 'Pedimentos', componente: Pedimentos },
 ]
 
 function App() {
