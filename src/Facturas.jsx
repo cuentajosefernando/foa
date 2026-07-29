@@ -17,6 +17,19 @@ const ESTADOS_PAGO = {
   reversed: 'Revertida',
 }
 
+const COLUMNAS = [
+  { campo: 'numero', titulo: 'Número' },
+  { campo: 'fecha', titulo: 'Fecha' },
+  { campo: 'vencimiento', titulo: 'Vencimiento' },
+  { campo: 'cliente', titulo: 'Cliente' },
+  { campo: 'subtotal', titulo: 'Subtotal', num: true },
+  { campo: 'impuestos', titulo: 'Impuestos', num: true },
+  { campo: 'total', titulo: 'Total', num: true },
+  { campo: 'saldo', titulo: 'Saldo', num: true },
+  { campo: 'estado', titulo: 'Estado' },
+  { campo: 'estadoPago', titulo: 'Pago' },
+]
+
 const money = (n, moneda) =>
   new Intl.NumberFormat('es-MX', { style: 'currency', currency: moneda || 'MXN' }).format(n || 0)
 
@@ -28,6 +41,9 @@ function Facturas() {
   const [error, setError] = useState('')
   const [busqueda, setBusqueda] = useState('')
   const [estado, setEstado] = useState('todos')
+  const [desde, setDesde] = useState('')
+  const [hasta, setHasta] = useState('')
+  const [orden, setOrden] = useState({ campo: 'fecha', dir: 'desc' })
   const [exportando, setExportando] = useState(false)
 
   useEffect(() => {
@@ -53,8 +69,11 @@ function Facturas() {
 
   const filtradas = useMemo(() => {
     const q = busqueda.trim().toLowerCase()
-    return facturas.filter((f) => {
+    const seleccionadas = facturas.filter((f) => {
       if (estado !== 'todos' && f.estado !== estado) return false
+      // Las facturas en borrador no tienen fecha: quedan fuera si se filtra por rango.
+      if (desde && (!f.fecha || f.fecha < desde)) return false
+      if (hasta && (!f.fecha || f.fecha > hasta)) return false
       if (!q) return true
       return (
         f.cliente.toLowerCase().includes(q) ||
@@ -62,7 +81,38 @@ function Facturas() {
         f.origen.toLowerCase().includes(q)
       )
     })
-  }, [facturas, busqueda, estado])
+
+    const factor = orden.dir === 'asc' ? 1 : -1
+    return [...seleccionadas].sort((a, b) => {
+      const x = a[orden.campo]
+      const y = b[orden.campo]
+      // Los valores vacíos siempre al final, sin importar la dirección.
+      const vacioX = x === null || x === undefined || x === ''
+      const vacioY = y === null || y === undefined || y === ''
+      if (vacioX && vacioY) return 0
+      if (vacioX) return 1
+      if (vacioY) return -1
+      if (typeof x === 'number' && typeof y === 'number') return (x - y) * factor
+      return String(x).localeCompare(String(y), 'es', { numeric: true }) * factor
+    })
+  }, [facturas, busqueda, estado, desde, hasta, orden])
+
+  function ordenarPor(campo) {
+    setOrden((prev) =>
+      prev.campo === campo
+        ? { campo, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
+        : { campo, dir: 'asc' }
+    )
+  }
+
+  function limpiarFiltros() {
+    setBusqueda('')
+    setEstado('todos')
+    setDesde('')
+    setHasta('')
+  }
+
+  const hayFiltros = busqueda || estado !== 'todos' || desde || hasta
 
   const kpis = useMemo(() => {
     const total = filtradas.reduce((s, f) => s + (f.total || 0), 0)
@@ -176,6 +226,31 @@ function Facturas() {
           <option value="draft">Borrador</option>
           <option value="cancel">Canceladas</option>
         </select>
+        <label style={styles.campoFecha}>
+          Desde
+          <input
+            type="date"
+            value={desde}
+            max={hasta || undefined}
+            onChange={(e) => setDesde(e.target.value)}
+            style={styles.inputFecha}
+          />
+        </label>
+        <label style={styles.campoFecha}>
+          Hasta
+          <input
+            type="date"
+            value={hasta}
+            min={desde || undefined}
+            onChange={(e) => setHasta(e.target.value)}
+            style={styles.inputFecha}
+          />
+        </label>
+        {hayFiltros && (
+          <button onClick={limpiarFiltros} style={styles.limpiar}>
+            Limpiar filtros
+          </button>
+        )}
       </div>
 
       {error && <p style={styles.error}>{error}</p>}
@@ -189,16 +264,14 @@ function Facturas() {
           <table style={styles.tabla}>
             <thead>
               <tr>
-                <th style={styles.th}>Número</th>
-                <th style={styles.th}>Fecha</th>
-                <th style={styles.th}>Vencimiento</th>
-                <th style={styles.th}>Cliente</th>
-                <th style={styles.thNum}>Subtotal</th>
-                <th style={styles.thNum}>Impuestos</th>
-                <th style={styles.thNum}>Total</th>
-                <th style={styles.thNum}>Saldo</th>
-                <th style={styles.th}>Estado</th>
-                <th style={styles.th}>Pago</th>
+                {COLUMNAS.map((c) => (
+                  <ThOrdenable
+                    key={c.campo}
+                    columna={c}
+                    orden={orden}
+                    onClick={() => ordenarPor(c.campo)}
+                  />
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -223,6 +296,29 @@ function Facturas() {
         </div>
       )}
     </section>
+  )
+}
+
+function ThOrdenable({ columna, orden, onClick }) {
+  const activo = orden.campo === columna.campo
+  const flecha = !activo ? '↕' : orden.dir === 'asc' ? '↑' : '↓'
+  return (
+    <th
+      style={columna.num ? styles.thNum : styles.th}
+      aria-sort={activo ? (orden.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+    >
+      <button
+        onClick={onClick}
+        style={{
+          ...styles.botonOrden,
+          justifyContent: columna.num ? 'flex-end' : 'flex-start',
+          color: activo ? colors.naranja : colors.textoSec,
+        }}
+      >
+        {columna.titulo}
+        <span style={styles.flecha}>{flecha}</span>
+      </button>
+    </th>
   )
 }
 
@@ -323,11 +419,58 @@ const styles = {
     borderRadius: radius.input,
     background: colors.superficie,
   },
+  campoFecha: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    fontSize: 13,
+    color: colors.textoSec,
+  },
+  inputFecha: {
+    height: 40,
+    padding: '0 10px',
+    fontSize: 14,
+    fontFamily: font.body,
+    color: colors.texto,
+    border: `1px solid ${colors.grafito}66`,
+    borderRadius: radius.input,
+    background: colors.superficie,
+  },
+  limpiar: {
+    height: 40,
+    padding: '0 14px',
+    fontSize: 13,
+    fontFamily: font.body,
+    color: colors.texto,
+    background: 'transparent',
+    border: `1px solid ${colors.grafito}66`,
+    borderRadius: radius.input,
+    cursor: 'pointer',
+  },
+  botonOrden: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+    width: '100%',
+    padding: 0,
+    background: 'transparent',
+    border: 'none',
+    font: 'inherit',
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
+  flecha: {
+    fontSize: 11,
+    opacity: 0.8,
+  },
   contenedorTabla: {
     background: colors.superficie,
     borderRadius: radius.card,
     boxShadow: shadow,
-    overflowX: 'auto',
+    // Scroll propio: mantiene fijo el encabezado de la tabla al recorrer las filas.
+    overflow: 'auto',
+    maxHeight: 'calc(100vh - 300px)',
     padding: 8,
   },
   tabla: {
@@ -338,6 +481,7 @@ const styles = {
   th: {
     position: 'sticky',
     top: 0,
+    zIndex: 5,
     background: colors.superficie,
     textAlign: 'left',
     padding: '10px 12px',
@@ -350,6 +494,7 @@ const styles = {
   thNum: {
     position: 'sticky',
     top: 0,
+    zIndex: 5,
     background: colors.superficie,
     textAlign: 'right',
     padding: '10px 12px',

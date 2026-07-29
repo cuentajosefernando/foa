@@ -87,6 +87,11 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     gap: 24,
+    position: 'sticky',
+    top: 0,
+    alignSelf: 'flex-start',
+    height: '100vh',
+    overflowY: 'auto',
   },
   logo: {
     width: 120,
@@ -131,6 +136,9 @@ const styles = {
     padding: '14px 24px',
     background: colors.superficie,
     borderBottom: `1px solid ${colors.grafito}33`,
+    position: 'sticky',
+    top: 0,
+    zIndex: 20,
   },
   tituloHeader: {
     margin: 0,
