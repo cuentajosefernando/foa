@@ -143,7 +143,6 @@ function Facturas() {
   return (
     <section>
       <div style={styles.encabezado}>
-        <h2 style={styles.titulo}>Relación de facturas</h2>
         <button
           onClick={exportar}
           disabled={exportando || !filtradas.length}
@@ -258,16 +257,10 @@ const styles = {
   encabezado: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     gap: 16,
     marginBottom: 16,
     flexWrap: 'wrap',
-  },
-  titulo: {
-    margin: 0,
-    fontFamily: font.display,
-    fontSize: 20,
-    color: colors.texto,
   },
   botonExportar: {
     height: 40,
