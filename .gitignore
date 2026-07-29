@@ -1,0 +1,9 @@
+node_modules
+dist
+.env
+.env.local
+credencial.py
+foa.txt
+dev-server.log
+dev-server-err.log
+.claude/scheduled_tasks.lock
